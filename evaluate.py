@@ -5,40 +5,53 @@ from tqdm import tqdm
 import plotly.express as px 
 import pandas as pd
 
-RalphAstarP = [0]
-XAstarP = [0]
-cowardP = [0]
+agents_points = []
 ind = [0]
+configuration = {"rows": 10, "columns": 8}
+agents_names = ["submission-ralph-astar.py","submission-x-astar.py","submission-ralph-coward.py","submission-ralph-rl.py"]
+#agents_names = ["random.py","submission-ralph-rl.py"]
+agents = []
+for agent in agents_names:
+    agents.append("./agents/"+agent)
+    agents_points.append([0])
 for i in tqdm(range(0,100)):
-    env1 = make("hungry_geese", debug=False) #set debug to True to see agent internals each step
+    env1 = make("hungry_geese", debug=True) #set debug to True to see agent internals each step
     env1.reset()
-    configuration = {"rows": 10, "columns": 8}
-    agents = ["./agents/submission-ralph-astar.py","./agents/submission-x-astar.py","./agents/submission-ralph-coward.py"]
+    
     steps = env1.run(agents)
 
     obs = steps[len(steps) - 1][0]["observation"]
-    RalphAstar = RalphAstarP[len(RalphAstarP)-1]
-    XAstar = XAstarP[len(XAstarP)-1]
-    coward = cowardP[len(cowardP)-1]
+
+    round_points = []
+    #print()
+    #print(agents_points)
+    #print()
+    #print()
+    for i,points in enumerate(agents_points):
+        #print(agents_points[i][len(agents_points[i])-1])
+        round_points.append(agents_points[i][len(agents_points[i])-1])
+
+    
+    #print(round_points)
+    
     geese = obs["geese"]
-    if(len(geese[0])>0):
-        RalphAstar = RalphAstar + 1
-    if(len(geese[1])>0):
-        XAstar = XAstar + 1
-    if(len(geese[2])>0):
-        coward = coward + 1
-    cowardP.append(coward)
-    RalphAstarP.append(RalphAstar)
-    XAstarP.append(XAstar)
+
+    for i,goose in enumerate(geese):
+        #print(i,goose)
+        p = round_points[i]
+        if(len(goose)>0):
+            p = p +1
+        agents_points[i].append(p)
+            
+
 
     ind.append(len(ind))
 
 
 df = pd.DataFrame()
-df["RalphAstar"] = RalphAstarP
-df["XAstar"] = XAstarP
-df["Coward"] = cowardP
+for i,name in enumerate(agents_names):
+    df[name] = agents_points[i]
 df["ind"] = ind
-fig = px.line(df, x='ind', y=['RalphAstar', 'XAstar',"Coward"])
+fig = px.line(df, x='ind', y=agents_names)
 fig.show()
 fig.write_html("plot.html")
