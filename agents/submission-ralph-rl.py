@@ -4,8 +4,11 @@ from kaggle_environments.envs.hungry_geese.hungry_geese import translate, adjace
 from tensorflow import keras
 
 import os
+import random
 import numpy as np
 import pandas as pd
+from pprint import pprint
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 os.environ['TF_XLA_FLAGS'] = '--tf_xla_enable_xla_devices'
 def get_grid_from_obs(obs,columns,rows):
         mapa = []
@@ -98,6 +101,7 @@ def get_sensors_from_grid(grid,columns,obs,last,debug):
             break
         if(grid[px_a][py_a] == 3):
             sensor_frente[1] = 1
+            break
         else:
             sensor_frente[0]+=1
     
@@ -118,6 +122,7 @@ def get_sensors_from_grid(grid,columns,obs,last,debug):
             break
         if(grid[px_a][py_a] == 3):
             sensor_esquerda[1] = 1
+            break
         else:
             sensor_esquerda[0]+=1
     
@@ -139,17 +144,73 @@ def get_sensors_from_grid(grid,columns,obs,last,debug):
             break
         if(grid[px_a][py_a] == 3):
             sensor_direita[1] = 1
+            break
         else:
             sensor_direita[0]+=1
     
-    return np.array([frente,sensor_frente[0],sensor_frente[1],sensor_esquerda[0],sensor_esquerda[1],sensor_direita[0],sensor_direita[1]])
+    # Verificando as diagonais
+    tras = frente + 2
+    if(tras>=4):
+        tras-=4
+    
+    px_a,py_a = (px+    movimentos[direita][0]  + movimentos[frente][0] )  ,  (py+     movimentos[direita][1]  + movimentos[frente][1])   
+    if(px_a>6):
+        px_a = px_a - 7
+    if(py_a>10):
+        py_a = py_a - 11
+    
+    if(px_a<0):
+        px_a = 7+ px_a
+    if(py_a<0):
+        py_a = 11 + py_a
+    frente_direita = grid[px_a,py_a]
+
+    px_a,py_a =   (px+    movimentos[esquerda][0] + movimentos[frente][0] ) ,   (py+     movimentos[esquerda][1] + movimentos[frente][1])
+    if(px_a>6):
+        px_a = px_a - 7
+    if(py_a>10):
+        py_a = py_a - 11
+    
+    if(px_a<0):
+        px_a = 7+ px_a
+    if(py_a<0):
+        py_a = 11 + py_a
+    frente_esquerda = grid[px_a,py_a]
+
+    px_a,py_a =      (px+    movimentos[esquerda][0] + movimentos[tras][0]   ) ,   (py+     movimentos[esquerda][1] + movimentos[tras][1]  )
+    if(px_a>6):
+        px_a = px_a - 7
+    if(py_a>10):
+        py_a = py_a - 11
+    
+    if(px_a<0):
+        px_a = 7+ px_a
+    if(py_a<0):
+        py_a = 11 + py_a
+    tras_esqueda = grid[px_a,py_a]
+
+
+    px_a,py_a=      (px+    movimentos[direita][0]  + movimentos[tras][0]   ) ,   (py+     movimentos[direita][1]  + movimentos[tras][1]  )
+    if(px_a>6):
+        px_a = px_a - 7
+    if(py_a>10):
+        py_a = py_a - 11
+    
+    if(px_a<0):
+        px_a = 7+ px_a
+    if(py_a<0):
+        py_a = 11 + py_a
+    tras_direita = grid[px_a,py_a]
+
+    return np.array([frente,sensor_frente[0],sensor_frente[1],sensor_esquerda[0],sensor_esquerda[1],sensor_direita[0],sensor_direita[1],frente_direita,frente_esquerda,tras_direita,tras_esqueda])
+model = keras.models.load_model('./model')
 last = Action.SOUTH
 def agent(obs,config):
     global last
-    model = keras.models.load_model('./model')
+    global model
     state = get_grid_from_obs(obs,config.columns,config.rows)
-    state = get_sensors_from_grid(state,config.columns,obs,last,True)
-    state = np.reshape(state, [1, 7])
+    state = get_sensors_from_grid(state,config.columns,obs,last,False)
+    state = np.reshape(state, [1, 11])
     print(state)
     action =np.argmax(model.predict(state)[0]) 
     actL = []
@@ -159,4 +220,3 @@ def agent(obs,config):
     last = opposite(actL[action])
     return actL[action].name
     
-
